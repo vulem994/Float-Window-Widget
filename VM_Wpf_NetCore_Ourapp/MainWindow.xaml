@@ -4,15 +4,21 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Circle"
         Width="250"
-        Height="250"
+        Height="150"
         AllowsTransparency="True"
         Background="Transparent"      
         ShowInTaskbar="False"
         WindowStyle="None"
         Deactivated="Window_Deactivated"
-        MouseDown="Window_MouseDown">
+        MouseDown="Window_MouseDown"
+        MouseDoubleClick="Window_MouseDoubleClick"
+        Focusable="False">
     <Grid x:Name="grid_main">
-        <Image Visibility="Visible" Source="/Resources/folderVoyager.png" />
+        <!--<Image Visibility="Visible" Source="/Resources/folderVoyager.png" />-->
+        <Image Source="/Resources/testIcon.png" />
+
+        <TextBlock Background="White"  HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding selectedText}"/>
+
         <Button x:Name="button_minimize" Content="x" Click="button_minimize_Click" 
                 VerticalAlignment="Top" HorizontalAlignment="Right"
                 MinHeight="20" MinWidth="20" Margin="5" />

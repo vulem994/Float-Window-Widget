@@ -1,8 +1,14 @@
-﻿using System;
+﻿using Gma.System.MouseKeyHook;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,7 +26,7 @@ namespace VM_Wpf_NetCore_Ourapp
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly string contextMenu_searchItem_text = "Search";
         private readonly string contextMenu_SettingsItem_text = "Settings";
@@ -28,9 +34,35 @@ namespace VM_Wpf_NetCore_Ourapp
 
         private NotifyIcon trayIcon;
 
+        private bool _stop = false;
+
+        private IKeyboardMouseEvents globalMouseHook;
+
+        #region -selectedText- property
+        private String _selectedText;
+        public String selectedText
+        {
+            get { return _selectedText; }
+            set
+            {
+                if (_selectedText != value)
+                {
+                    _selectedText = value;
+                    //System.Windows.MessageBox.Show(selectedText);
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+        #endregion
+
         public MainWindow()
         {
             InitializeComponent();
+            this.DataContext = this;
+            //Initialize global mouse hook
+            globalMouseHook = Hook.GlobalEvents();
+
+     
 
             InitialzeWindow();
             InitializeTrayIcon();
@@ -39,7 +71,7 @@ namespace VM_Wpf_NetCore_Ourapp
         //Initialize functions
         private void InitializeTrayIcon()
         {
-            Bitmap bmp = new Bitmap(@"C:\Users\vulem\source\repos\VM_Wpf_NetCore_Ourapp\VM_Wpf_NetCore_Ourapp\Resources\folderVoyager.png");
+            Bitmap bmp = new Bitmap(@"C:\Users\vulem\source\repos\VM_Wpf_NetCore_Ourapp\VM_Wpf_NetCore_Ourapp\Resources\testIcon.png");
             // Icon iconImg = System.Drawing.Icon.FromHandle(bmp.GetHicon());
 
             trayIcon = new NotifyIcon();
@@ -59,11 +91,34 @@ namespace VM_Wpf_NetCore_Ourapp
             Left = desktopDim.Right - Width * 2;
             Top = desktopDim.Top + Height * 2;
 
+            
+            globalMouseHook.MouseDoubleClick += GlobalMouseHook_SelectionFinished;
+            globalMouseHook.MouseDragFinished += GlobalMouseHook_SelectionFinished;
+
             HideFloat(); //hide on start - maybe from config file 
+        }
+
+        private void ReleaseAllProcecss()
+        {
+            _stop = true;
+            if (globalMouseHook != null)
+            {
+                globalMouseHook.MouseDoubleClick -= GlobalMouseHook_SelectionFinished;
+                globalMouseHook.MouseDragFinished -= GlobalMouseHook_SelectionFinished;
+                globalMouseHook.Dispose();
+                globalMouseHook = null;
+            }
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+                trayIcon = null;
+            }
         }
 
 
         //Events 
+        #region TrayIcon context menu items click event
         private void TrayIconContextMenuItemClick(object sender, EventArgs e)
         {
             var typedSender = sender as ToolStripMenuItem;
@@ -75,15 +130,29 @@ namespace VM_Wpf_NetCore_Ourapp
                 }
                 else if (typedSender.Text == contextMenu_quitItem_text)
                 {
-                    this.Close();
+                    var result = System.Windows.MessageBox.Show("Are you sure you want to quit?","", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if(result == MessageBoxResult.Yes)
+                    {
+                        this.Close();
+                    }             
                 }
                 else if (typedSender.Text == contextMenu_SettingsItem_text)
                 {
-                    //implement settings
+                    //TODO: implement settings
                 }
             }
         }
 
+        #endregion
+
+        #region ButtonMinize click event
+        private void button_minimize_Click(object sender, RoutedEventArgs e)
+        {
+            HideFloat();
+        }
+        #endregion
+
+        #region Window mouse down event
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -91,28 +160,38 @@ namespace VM_Wpf_NetCore_Ourapp
                 this.DragMove();
             }
         }
+        #endregion
 
+        #region Window deactivated event
         private void Window_Deactivated(object sender, EventArgs e)
         {
             Window window = (Window)sender;
             window.Topmost = true;
         }
+        #endregion
 
-        private void button_minimize_Click(object sender, RoutedEventArgs e)
-        {
-            HideFloat();
-
-        }
-
+        #region Window closed event
         protected override void OnClosed(EventArgs e)
         {
-            if (trayIcon != null)
+            ReleaseAllProcecss();
+        }
+        #endregion
+
+        #region Window mouse double click event (Not using)
+        private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            try
             {
-                trayIcon.Visible = false;
-                trayIcon.Dispose();
-                trayIcon = null;
+                //Debugger.Launch();
+                //var x = getTextAsync();
+                //System.Windows.MessageBox.Show(x);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message);
             }
         }
+        #endregion
 
         #region TrayIcon click event (Not using)
         private void TrayIcon_Click(object sender, EventArgs e)
@@ -123,7 +202,6 @@ namespace VM_Wpf_NetCore_Ourapp
             }
         }
         #endregion
-
 
         //Helper functions
         #region Show float function
@@ -139,5 +217,41 @@ namespace VM_Wpf_NetCore_Ourapp
         }
         #endregion
 
+        private async void GlobalMouseHook_SelectionFinished(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            System.Windows.IDataObject tmpClipboard = System.Windows.Clipboard.GetDataObject();
+
+            System.Windows.Clipboard.Clear();
+            await Task.Delay(50);
+
+            System.Windows.Forms.SendKeys.SendWait("^c");
+
+            await Task.Delay(50);
+            if (System.Windows.Clipboard.ContainsText())
+            {
+                string text = System.Windows.Clipboard.GetText();
+                selectedText = text;
+            }
+            else
+            {
+                // Restore the Clipboard.
+                System.Windows.Clipboard.SetDataObject(tmpClipboard);
+            }
+
+
+        }
+
+        //Notify propertu change
+        #region INotifyPropertyChange implementation
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // This method is called by the Set accessor of each property.
+        // The CallerMemberName attribute that is applied to the optional propertyName
+        // parameter causes the property name of the caller to be substituted as an argument.
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        #endregion
     }//[Class]
 }//[Namespace]
