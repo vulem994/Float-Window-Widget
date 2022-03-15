@@ -54,6 +54,21 @@ namespace VM_Wpf_NetCore_Ourapp
             }
         }
         #endregion
+        #region -bmp- property
+        private Bitmap _bmp;
+        public Bitmap bmp
+        {
+            get { return _bmp; }
+            set
+            {
+                if (_bmp != value)
+                {
+                    _bmp = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+        #endregion
 
         public MainWindow()
         {
@@ -62,7 +77,7 @@ namespace VM_Wpf_NetCore_Ourapp
             //Initialize global mouse hook
             globalMouseHook = Hook.GlobalEvents();
 
-     
+
 
             InitialzeWindow();
             InitializeTrayIcon();
@@ -71,8 +86,9 @@ namespace VM_Wpf_NetCore_Ourapp
         //Initialize functions
         private void InitializeTrayIcon()
         {
-            Bitmap bmp = new Bitmap(@"C:\Users\vulem\source\repos\VM_Wpf_NetCore_Ourapp\VM_Wpf_NetCore_Ourapp\Resources\testIcon.png");
+            //Bitmap bmp = new Bitmap(@"C:\Users\vulem\source\repos\VM_Wpf_NetCore_Ourapp\VM_Wpf_NetCore_Ourapp\Resources\testIcon.png");
             // Icon iconImg = System.Drawing.Icon.FromHandle(bmp.GetHicon());
+            bmp = VM_Wpf_NetCore_Ourapp.Resources.Resources.folderVoyager;
 
             trayIcon = new NotifyIcon();
             trayIcon.Visible = true;
@@ -91,7 +107,7 @@ namespace VM_Wpf_NetCore_Ourapp
             Left = desktopDim.Right - Width * 2;
             Top = desktopDim.Top + Height * 2;
 
-            
+
             globalMouseHook.MouseDoubleClick += GlobalMouseHook_SelectionFinished;
             globalMouseHook.MouseDragFinished += GlobalMouseHook_SelectionFinished;
 
@@ -130,11 +146,11 @@ namespace VM_Wpf_NetCore_Ourapp
                 }
                 else if (typedSender.Text == contextMenu_quitItem_text)
                 {
-                    var result = System.Windows.MessageBox.Show("Are you sure you want to quit?","", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    if(result == MessageBoxResult.Yes)
+                    var result = System.Windows.MessageBox.Show("Are you sure you want to quit?", "", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
                     {
                         this.Close();
-                    }             
+                    }
                 }
                 else if (typedSender.Text == contextMenu_SettingsItem_text)
                 {
